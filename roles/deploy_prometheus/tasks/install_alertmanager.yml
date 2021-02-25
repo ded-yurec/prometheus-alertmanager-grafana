@@ -1,0 +1,81 @@
+---
+
+
+- name: Create user
+  user:
+    name: alertmanager
+    shell: /bin/false
+    create_home: no
+
+- name: Create dir
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: alertmanager
+    group: alertmanager
+    mode: 0755
+  loop:
+    - '/tmp/alertmanager'
+    - '/etc/alertmanager'
+    - '/var/lib/prometheus/alertmanager'
+
+- name: Download and unzip alert manager
+  unarchive:
+    src: https://github.com/prometheus/alertmanager/releases/download/v0.21.0/alertmanager-0.21.0.linux-amd64.tar.gz
+    dest: /tmp/alertmanager
+    remote_src: yes
+
+- name: Copy file
+  copy:
+    src: /tmp/alertmanager/alertmanager-0.21.0.linux-amd64/{{ item }}
+    dest: /usr/local/bin/
+    remote_src: yes
+  loop: [ 'alertmanager' , 'amtool' ]
+
+
+- name: Copy file
+  copy:
+    src: /tmp/alertmanager/alertmanager-0.21.0.linux-amd64/{{ item }}
+    dest: /etc/alertmanager
+    remote_src: yes
+  loop: [ 'alertmanager.yml' ]
+
+
+- name: Get permission on dir
+  file:
+    path: "{{ item }}"
+    owner: alertmanager
+    group: alertmanager
+    mode: 0755
+    recurse : yes
+  loop:
+    - '/etc/alertmanager'
+    - '/var/lib/prometheus/alertmanager'
+
+- name : CHOWN on BIN file
+  file:
+    path: "{{ item }}"
+    owner: alertmanager
+    group: alertmanager
+    mode: 0755
+  loop:
+    - '/usr/local/bin/alertmanager'
+    - '/usr/local/bin/amtool'
+
+- name: Created File for Alertmanager systemd
+  template:
+    src=templates/alertmanager.service
+    dest=/etc/systemd/system/
+
+- name: START
+  systemd:
+    name: alertmanager.service
+    state: started
+    enabled: yes
+
+- name: access firewall for RPM
+  firewalld:
+    port: '9093/tcp'
+    permanent: true
+    state: enabled
+  when: ansible_os_family == "RedHat"

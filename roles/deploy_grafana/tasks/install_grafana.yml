@@ -1,0 +1,67 @@
+---
+
+- block:
+    - name: Add Repository RPM OS
+      yum_repository:
+        name: Grafana
+        description: Grafana YUM repo
+        baseurl: https://packages.grafana.com/oss/rpm
+        gpgkey: https://packages.grafana.com/gpg.key
+        gpgcheck: yes
+        sslverify: yes
+        sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+
+    - name: access firewalld for RPM
+      firewalld:
+        port: '3000/tcp'
+        permanent: true
+        state: enabled
+
+    - name: Install Grafana on RPM
+      yum:
+        name: grafana
+        state: latest
+
+
+  when: ansible_os_family == "RedHat"
+
+- block:
+    - name: Install required progrramm on DEB
+      apt:
+        name: "{{ item }}"
+      loop:
+        - 'apt-transport-https'
+        - 'ca-certificates'
+        - 'gpg'
+
+    - name: Import Grafana Apt Key
+      apt_key:
+        url: https://packages.grafana.com/gpg.key
+        state: present
+
+    - name: Add APT Repository
+      apt_repository:
+        repo: deb https://packages.grafana.com/oss/deb stable main
+        state: present
+
+    - name: Install Grafana on DEB
+      apt:
+        name: grafana
+        state: latest
+
+
+  when: ansible_os_family == "Debian"
+
+- name: drop selinux
+  shell: setenforce 0
+  ignore_errors: yes
+
+- name: Enabled and START!!!
+  systemd:
+    name: grafana-server
+    enabled: yes
+    state: started
+
+- name: Wait for server to restart
+  reboot:
+    reboot_timeout: 3600

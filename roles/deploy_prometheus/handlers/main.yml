@@ -1,0 +1,6 @@
+---
+# handlers file for deploy_prometheus
+
+- name: systemd reload
+  systemd:
+    daemon_reload: yes

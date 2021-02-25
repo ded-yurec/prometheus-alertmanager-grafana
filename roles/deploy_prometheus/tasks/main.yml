@@ -1,0 +1,9 @@
+---
+# tasks file for deploy_prometheus
+
+
+- name: Install Prometheus
+  include_tasks: tasks/install_prometheus.yml
+
+- name: Install Alert
+  include_tasks: tasks/install_alertmanager.yml

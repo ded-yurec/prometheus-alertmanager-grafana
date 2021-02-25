@@ -1,0 +1,65 @@
+---
+- name: Create User
+  user:
+    name: prometheus
+    create_home: no
+    shell: /bin/false
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+  loop:
+    - '/tmp/prometheus'
+    - '/etc/prometheus'
+    - '/var/lib/prometheus'
+
+- name: Unzip archive
+  unarchive:
+    src: https://github.com/prometheus/prometheus/releases/download/v2.24.1/prometheus-2.24.1.linux-amd64.tar.gz
+    dest: /tmp/prometheus
+    remote_src: yes
+
+- name: Copy files to the directory
+  copy:
+    src: /tmp/prometheus/prometheus-2.24.1.linux-amd64/{{ item }}
+    dest: /usr/local/bin
+    remote_src: yes
+  loop: [ 'prometheus', 'promtool' ]
+
+
+- name: Copy to ETC
+  copy:
+    src: /tmp/prometheus/prometheus-2.24.1.linux-amd64/{{ item }}
+    dest: /etc/prometheus
+    remote_src: yes
+  loop: [ 'console_libraries', 'consoles', 'prometheus.yml']
+
+- name: Created File for Prometheus systemd
+  template:
+    src=templates/prometheus.service
+    dest=/etc/systemd/system/
+
+- name: Change permission on BIN Files
+  file:
+    path: /usr/local/bin
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+    recurse: yes
+
+- name: access firewalld for RPM
+  firewalld:
+    port: '9090/tcp'
+    permanent: true
+    state: enabled
+  when: ansible_os_family == "RedHat"
+
+- name: START
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
