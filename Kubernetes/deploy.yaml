@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cent
+  labels:
+    env: prod
+    app: main
+    tier: oss
+    owner: DedYurec
+spec:
+  selector:
+    matchLabels:
+      project: os
+  template:
+    metadata:
+      labels:
+        project: os
+    spec:
+      containers:
+        - name: centos
+          image: dedyurec/centos7
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              cpu: "500m"
+          #            requests:
+          #              cpu: "0.5"
+          ports:
+            - containerPort: 8080
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: centos-autoscaling
+  labels:
+    project: os
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v2beta1v1
+    kind: Deployment
+    name: cent
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 10
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: centos-service
+  labels:
+    env: prod
+    owner: dedyurec
+spec:
+  selector:
+    project: os
+  ports:
+    - name: ssh-listen
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: NodePort
