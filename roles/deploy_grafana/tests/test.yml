@@ -1,5 +1,5 @@
 ---
 - hosts: localhost
-  remote_user: root_1
+  remote_user: root
   roles:
     - deploy_grafana
